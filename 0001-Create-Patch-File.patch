@@ -1,0 +1,165 @@
+From 62735a6d14b991af0cd41d8f98aecca304b8f983 Mon Sep 17 00:00:00 2001
+From: Chuxiao Feng <chuxiaof@uchciago.edu>
+Date: Wed, 29 Jun 2022 15:59:37 -0500
+Subject: [PATCH] Create Patch File
+
+---
+ package.json        | 22 +++++++++++-----------
+ src/App.tsx         | 28 +++++++++++++++++++++-------
+ src/DataStreamer.ts |  4 ++--
+ src/Graph.tsx       | 11 ++++++++++-
+ 4 files changed, 44 insertions(+), 21 deletions(-)
+
+diff --git a/package.json b/package.json
+index a8ddff6..4cfea71 100644
+--- a/package.json
++++ b/package.json
+@@ -3,17 +3,17 @@
+   "version": "0.1.0",
+   "private": true,
+   "dependencies": {
+-    "@jpmorganchase/perspective": "^0.2.12",
+-    "@jpmorganchase/perspective-viewer": "^0.2.12",
+-    "@jpmorganchase/perspective-viewer-highcharts": "^0.2.12",
+-    "@types/jest": "^23.3.13",
+-    "@types/node": "^10.12.19",
+-    "@types/react": "^16.9.0",
+-    "@types/react-dom": "^16.0.11",
+-    "bootstrap": "^4.2.1",
+-    "puppeteer": "^1.19.0",
+-    "react": "^16.9.0",
+-    "react-dom": "^16.9.0",
++    "@jpmorganchase/perspective": "0.2.12",
++    "@jpmorganchase/perspective-viewer": "0.2.12",
++    "@jpmorganchase/perspective-viewer-highcharts": "0.2.12",
++    "@types/jest": "23.3.13",
++    "@types/node": "10.12.19",
++    "@types/react": "16.9.0",
++    "@types/react-dom": "16.0.11",
++    "bootstrap": "4.2.1",
++    "puppeteer": "1.19.0",
++    "react": "16.9.0",
++    "react-dom": "16.9.0",
+     "react-scripts": "2.1.3"
+   },
+   "scripts": {
+diff --git a/src/App.tsx b/src/App.tsx
+index 0728518..6f09bb5 100755
+--- a/src/App.tsx
++++ b/src/App.tsx
+@@ -8,6 +8,7 @@ import './App.css';
+  */
+ interface IState {
+   data: ServerRespond[],
++  showGraph: boolean,
+ }
+ 
+ /**
+@@ -22,6 +23,7 @@ class App extends Component<{}, IState> {
+       // data saves the server responds.
+       // We use this state to parse data down to the child element (Graph) as element property
+       data: [],
++      showGraph: false,
+     };
+   }
+ 
+@@ -29,18 +31,30 @@ class App extends Component<{}, IState> {
+    * Render Graph react component with state.data parse as property data
+    */
+   renderGraph() {
+-    return (<Graph data={this.state.data}/>)
++    if (this.state.showGraph) {
++      return (<Graph data={this.state.data} />)
++    }
+   }
+ 
+   /**
+    * Get new data from server and update the state with the new data
+    */
+   getDataFromServer() {
+-    DataStreamer.getData((serverResponds: ServerRespond[]) => {
+-      // Update the state by creating a new array of data that consists of
+-      // Previous data in the state and the new data from server
+-      this.setState({ data: [...this.state.data, ...serverResponds] });
+-    });
++    let x = 0;
++    const interval = setInterval(() => {
++      DataStreamer.getData((serverResponds: ServerRespond[]) => {
++        // Update the state by creating a new array of data that consists of
++        // Previous data in the state and the new data from server
++        this.setState({
++          data: serverResponds,
++          showGraph: true,
++        });
++      });
++      x++;
++      if (x > 1000) {
++        clearInterval(interval);
++      }
++    }, 100);
+   }
+ 
+   /**
+@@ -59,7 +73,7 @@ class App extends Component<{}, IState> {
+             // As part of your task, update the getDataFromServer() function
+             // to keep requesting the data every 100ms until the app is closed
+             // or the server does not return anymore data.
+-            onClick={() => {this.getDataFromServer()}}>
++            onClick={() => { this.getDataFromServer() }}>
+             Start Streaming Data
+           </button>
+           <div className="Graph">
+diff --git a/src/DataStreamer.ts b/src/DataStreamer.ts
+index 78583cb..7137807 100644
+--- a/src/DataStreamer.ts
++++ b/src/DataStreamer.ts
+@@ -15,7 +15,7 @@ export interface ServerRespond {
+ 
+ class DataStreamer {
+   // The url where datafeed server is listening
+-  static API_URL: string = 'http://localhost:8080/query?id=1';
++  static API_URL: string = 'http://34.134.109.59:8080/query?id=1';
+ 
+   /**
+    * Send request to the datafeed server and executes callback function on success
+@@ -29,7 +29,7 @@ class DataStreamer {
+       if (request.status === 200) {
+         callback(JSON.parse(request.responseText));
+       } else {
+-        alert ('Request failed');
++        alert('Request failed');
+       }
+     }
+ 
+diff --git a/src/Graph.tsx b/src/Graph.tsx
+index ec1430e..5965732 100644
+--- a/src/Graph.tsx
++++ b/src/Graph.tsx
+@@ -14,7 +14,7 @@ interface IProps {
+  * Perspective library adds load to HTMLElement prototype.
+  * This interface acts as a wrapper for Typescript compiler.
+  */
+-interface PerspectiveViewerElement {
++interface PerspectiveViewerElement extends HTMLElement {
+   load: (table: Table) => void,
+ }
+ 
+@@ -49,6 +49,15 @@ class Graph extends Component<IProps, {}> {
+ 
+       // Add more Perspective configurations here.
+       elem.load(this.table);
++      elem.setAttribute('view', 'y_line');
++      elem.setAttribute('column-pivots', '["stock"]');
++      elem.setAttribute('row-pivots', '["timestamp"]');
++      elem.setAttribute('columns', '["top_ask_price"]');
++      elem.setAttribute('aggregates',
++        `{"stock": "distinct count",
++        "top_ask_price": "avg",
++        "top_bid_price": "avg",
++        "timestamp": "distince count"}`);
+     }
+   }
+ 
+-- 
+2.32.0 (Apple Git-132)
+
